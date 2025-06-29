@@ -96,15 +96,19 @@ function createGrid() {
     const gridHeaderRow = document.createElement('tr');
     gridHeaderRow.classList.add('gridHeaderRow');
 
+    const gridFilterRow = document.createElement('tr');
+    gridFilterRow.classList.add('gridFilterRow');
+
     gridContainer.appendChild(gridTable);
     gridTable.appendChild(gridHeader);
     gridTable.appendChild(gridBody);
     gridHeader.appendChild(gridHeaderRow);
+    gridHeader.appendChild(gridFilterRow);
 
     if(gridConfig.columns && gridConfig.columns.length > 0)
     {
         createGridHeader();
-        createGridRecords();
+        createGridRecords(gridStore);
     }
 
     const addRecordButton = document.createElement('button');
@@ -117,19 +121,26 @@ function createGrid() {
 }
 
 function createGridHeader() {
-    const gridHeaderRow = document.querySelector('.gridHeaderRow');
+    const gridHeaderRow = document.querySelector('.gridHeaderRow'),
+    gridFilterRow = document.querySelector('.gridFilterRow');
     gridColumns = gridConfig.columns;
     gridColumns.forEach(column => {
             // creating header
-            const headerCell = document.createElement('th');
+            const headerCell = document.createElement('th'),
+            gridFilterCell = document.createElement('th'),
+            gridFilterInput = document.createElement('input');
+            gridFilterInput.setAttribute("id", `${column.dataIndex}`);
             const headerCellText = document.createTextNode(`${column.name}`);
             headerCell.appendChild(headerCellText);
             gridHeaderRow.appendChild(headerCell);
+            gridFilterCell.appendChild(gridFilterInput);
+            gridFilterRow.appendChild(gridFilterCell);
             headerCell.addEventListener('click', sortGridColumn);
+            gridFilterInput.addEventListener('input', filterGrid);
         });
 }
 
-function createGridRecords() {
+function createGridRecords(gridStore) {
     const gridRecords = gridStore.data;
     gridRecords.forEach(record => {
         addRecord(record);
@@ -170,11 +181,10 @@ function OnAddRecordButtonClick(eopts) {
         addRecordFormLabelText = document.createTextNode(`${column.name}`);
         addRecordFormLabel.appendChild(addRecordFormLabelText);
         addRecordFormLabel.classList.add('formLabel');
-        addRecordFormLabel.setAttribute("for", `${column.dataIndex}`);
-        addRecordFormLabel.setAttribute("for", `${column.dataIndex}`);
+        addRecordFormLabel.setAttribute("for", `${column.name}`);
 
         const addRecordFormInput = document.createElement('input');
-        addRecordFormInput.setAttribute("id", `${column.dataIndex}`);
+        addRecordFormInput.setAttribute("id", `${column.name}`);
 
         addRecordForm.appendChild(addRecordFormLabel);
         addRecordForm.appendChild(addRecordFormInput);
@@ -203,7 +213,7 @@ function onAddRecordFormSubmitBtnClick(e) {
     dataObj.id = 21;
 
     gridColumns.forEach(column => {
-        const addRecordFormInput = document.getElementById(`${column.dataIndex}`),
+        const addRecordFormInput = document.getElementById(`${column.name}`),
         addRecordFormInputValue = addRecordFormInput.value;
         recordData[column.dataIndex] = addRecordFormInputValue;
         console.log(addRecordFormInputValue);
@@ -221,16 +231,36 @@ function sortGridColumn (e) {
     const columnName = e.target.innerText,
     gridColumns = gridConfig.columns;
 
-    const filterKey = gridColumns.filter(column => {
+    const sortKey = gridColumns.filter(column => {
         return column.name === columnName;
     })[0].dataIndex,
 
     gridStoreData =  gridStore.getData();
-    gridStoreData.sort((a, b) => a.data[filterKey].localeCompare(b.data[filterKey]));
+    gridStoreData.sort((a, b) => a.data[sortKey].localeCompare(b.data[sortKey]));
     gridStore.data = gridStoreData;
     clearRecords();
-    createGridRecords();
+    createGridRecords(gridStore);
 
+}
+
+function filterGrid(e) {
+    const tempStore = JSON.parse(JSON.stringify(gridStore)),
+    filterKey = e.target.id,
+    filterValue = e.target.value;
+
+    tempStore.data = tempStore.data.filter((record) => {
+        return record.data[filterKey].toLowerCase().includes(filterValue.toLowerCase());
+    });
+
+    if(filterValue === '')
+    {
+        clearRecords();
+        createGridRecords(gridStore);
+    }
+    else {
+        clearRecords();
+        createGridRecords(tempStore);
+    }
 }
 
 createGrid();
